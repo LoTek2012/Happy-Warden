@@ -20,7 +20,7 @@ public class ModEntityTypes {
     public static final RegistryObject<EntityType<HappyWardenEntity>> HAPPY_WARDEN =
             ENTITY_TYPES.register("happy_warden",
                 () -> EntityType.Builder.of(HappyWardenEntity::new, EntityClassification.CREATURE)
-                        .sized(2.0F, 3.7F) // Largeur (X,Z) et la hauteur (Y) de la hitbox
+                    .sized(0.9F, 2.9F) // Largeur (X,Z) et hauteur (Y) de la hitbox
                         .build(new ResourceLocation("happywarden", "happy_warden").toString()));
 
     public static void register(IEventBus eventBus) {

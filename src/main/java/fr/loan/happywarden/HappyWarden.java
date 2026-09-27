@@ -1,12 +1,14 @@
 package fr.loan.happywarden;
 
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+
 import fr.loan.happywarden.init.ModEntityTypes;
+import fr.loan.happywarden.init.ModItems;
 
 // The value here should match an entry in the META-INF/mods.toml file
 @Mod(HappyWarden.MOD_ID)
@@ -24,7 +26,8 @@ public class HappyWarden
         // Récupération du bus d'événements du mod
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
 
-        // Enregistrement des registres (comme tes entités)
+        // Enregistrement des registres (comme tes entités, items, blocs, etc.) auprès du bus d'événements
         ModEntityTypes.register(modEventBus);
+        ModItems.register(modEventBus);
     }
 }
