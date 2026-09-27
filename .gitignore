@@ -29,3 +29,4 @@ forge*changelog.txt
 # Custom
 .vfox/
 test/
+.vfox.toml
