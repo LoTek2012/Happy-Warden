@@ -2,7 +2,9 @@ package fr.loan.happywarden.client.renderer.happy_warden;
 
 import fr.loan.happywarden.HappyWarden;
 import fr.loan.happywarden.client.model.HappyWardenModel;
+import fr.loan.happywarden.client.renderer.happy_warden.HappyWardenSaddleLayer;
 import fr.loan.happywarden.entity.HappyWardenEntity;
+
 import net.minecraft.client.renderer.entity.EntityRendererManager;
 import net.minecraft.client.renderer.entity.MobRenderer;
 import net.minecraft.util.ResourceLocation;
@@ -15,6 +17,7 @@ public class HappyWardenRenderer extends MobRenderer<HappyWardenEntity, HappyWar
 
     public HappyWardenRenderer(EntityRendererManager renderManager) {
         super(renderManager, new HappyWardenModel<>(), 0.7F); // 0.7F = Taille de l'ombre au sol
+        this.addLayer(new HappyWardenSaddleLayer<>(this, new HappyWardenModel<>()));
     }
 
     @Override

@@ -9,6 +9,7 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 
 import fr.loan.happywarden.init.ModEntityTypes;
 import fr.loan.happywarden.init.ModItems;
+import fr.loan.happywarden.network.HappyWardenNetwork;
 
 // The value here should match an entry in the META-INF/mods.toml file
 @Mod(HappyWarden.MOD_ID)
@@ -29,5 +30,6 @@ public class HappyWarden
         // Enregistrement des registres (comme tes entités, items, blocs, etc.) auprès du bus d'événements
         ModEntityTypes.register(modEventBus);
         ModItems.register(modEventBus);
+        HappyWardenNetwork.register();
     }
 }
