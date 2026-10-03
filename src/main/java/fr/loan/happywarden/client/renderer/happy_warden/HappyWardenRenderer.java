@@ -21,7 +21,7 @@ public class HappyWardenRenderer extends MobRenderer<HappyWardenEntity, HappyWar
     }
 
     @Override
-    public ResourceLocation getTextureLocation(HappyWardenEntity entity) {
+    public ResourceLocation getEntityTexture(HappyWardenEntity entity) {
         return TEXTURE;
     }
 }

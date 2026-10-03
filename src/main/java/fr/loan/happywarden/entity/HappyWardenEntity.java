@@ -31,7 +31,7 @@ import net.minecraft.world.World;
 
 public class HappyWardenEntity extends CreatureEntity {
 
-    private static final DataParameter<Boolean> SADDLED = EntityDataManager.defineId(HappyWardenEntity.class, DataSerializers.BOOLEAN);
+    private static final DataParameter<Boolean> SADDLED = EntityDataManager.createKey(HappyWardenEntity.class, DataSerializers.BOOLEAN);
 
     public HappyWardenEntity(EntityType<? extends CreatureEntity> type, World world) {
         super(type, world);
@@ -39,36 +39,36 @@ public class HappyWardenEntity extends CreatureEntity {
 
     // Attributs de base (vie, vitesse, dégâts)
     public static AttributeModifierMap.MutableAttribute registerAttributes() {
-        return MobEntity.createMobAttributes()
-                .add(Attributes.MAX_HEALTH, 500.0D)
-                .add(Attributes.MOVEMENT_SPEED, 0.3D)
-                .add(Attributes.ATTACK_DAMAGE, 20.0D);
+        return MobEntity.func_233666_p_()
+            .createMutableAttribute(Attributes.MAX_HEALTH, 500.0D)
+            .createMutableAttribute(Attributes.MOVEMENT_SPEED, 0.3D)
+            .createMutableAttribute(Attributes.ATTACK_DAMAGE, 20.0D);
     }
 
     // Données réseau & NBT pour la selle
     @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(SADDLED, false);
+    protected void registerData() {
+        super.registerData();
+        this.dataManager.register(SADDLED, false);
     }
 
     public boolean isSaddled() {
-        return this.entityData.get(SADDLED);
+        return this.dataManager.get(SADDLED);
     }
 
     public void setSaddled(boolean saddled) {
-        this.entityData.set(SADDLED, saddled);
+        this.dataManager.set(SADDLED, saddled);
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundNBT compound) {
-        super.addAdditionalSaveData(compound);
+    public void writeAdditional(CompoundNBT compound) {
+        super.writeAdditional(compound);
         compound.putBoolean("Saddle", this.isSaddled());
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundNBT compound) {
-        super.readAdditionalSaveData(compound);
+    public void readAdditional(CompoundNBT compound) {
+        super.readAdditional(compound);
         this.setSaddled(compound.getBoolean("Saddle"));
     }
 
@@ -86,29 +86,29 @@ public class HappyWardenEntity extends CreatureEntity {
 
     // Interaction avec le joueur
     @Override
-    public ActionResultType mobInteract(PlayerEntity player, Hand hand) {
-        ItemStack stack = player.getItemInHand(hand);
+    protected ActionResultType getEntityInteractionResult(PlayerEntity player, Hand hand) {
+        ItemStack stack = player.getHeldItem(hand);
 
         // Mettre la selle
         if (stack.getItem() == Items.SADDLE && !this.isSaddled()) {
             this.setSaddled(true);
-            this.playSound(SoundEvents.HORSE_SADDLE, 1.0F, 1.0F);
+            this.playSound(SoundEvents.ENTITY_HORSE_SADDLE, 1.0F, 1.0F);
 
-            if (!player.abilities.instabuild) {
+            if (!player.abilities.isCreativeMode) {
                 stack.shrink(1); // Consomme la selle en mode survie
             }
-            return ActionResultType.sidedSuccess(this.level.isClientSide);
+            return ActionResultType.func_233537_a_(this.world.isRemote);
         }
 
         // Monter sur le mob uniquement s'il a une selle et si le joueur ne s'accroupit pas
-        if (this.isSaddled() && !this.isVehicle() && !player.isSecondaryUseActive()) {
-            if (!this.level.isClientSide) {
+        if (this.isSaddled() && !this.isBeingRidden() && !player.isSecondaryUseActive()) {
+            if (!this.world.isRemote) {
                 player.startRiding(this);
             }
-            return ActionResultType.sidedSuccess(this.level.isClientSide);
+            return ActionResultType.func_233537_a_(this.world.isRemote);
         }
 
-        return super.mobInteract(player, hand);
+        return super.getEntityInteractionResult(player, hand);
     }
 
     @Nullable
@@ -119,13 +119,13 @@ public class HappyWardenEntity extends CreatureEntity {
     }
 
     @Override
-    public double getPassengersRidingOffset() {
+    public double getMountedYOffset() {
         return 3.0D;
     }
 
     public void jumpFromRider(PlayerEntity rider) {
         if (rider == this.getControllingPassenger() && this.onGround) {
-            this.jumpFromGround();
+            this.jump();
         }
     }
 
@@ -134,27 +134,27 @@ public class HappyWardenEntity extends CreatureEntity {
         if (this.isAlive()) {
             Entity passenger = this.getControllingPassenger();
 
-            if (this.isVehicle() && passenger instanceof LivingEntity) {
+            if (this.isBeingRidden() && passenger instanceof LivingEntity) {
                 LivingEntity rider = (LivingEntity) passenger;
 
                 // Aligne la rotation du mob sur celle du joueur
-                this.yRot = rider.yRot;
-                this.yRotO = this.yRot;
-                this.xRot = rider.xRot * 0.5F;
-                this.setRot(this.yRot, this.xRot);
-                this.yBodyRot = this.yRot;
-                this.yHeadRot = this.yRot;
+                this.rotationYaw = rider.rotationYaw;
+                this.prevRotationYaw = this.rotationYaw;
+                this.rotationPitch = rider.rotationPitch * 0.5F;
+                this.setRotation(this.rotationYaw, this.rotationPitch);
+                this.setRotationYawHead(this.rotationYaw);
+                this.setRenderYawOffset(this.rotationYaw);
 
                 // Récupère les entrées clavier du joueur
-                float strafe = rider.xxa * 0.5F;
-                float forward = rider.zza;
+                float strafe = rider.moveStrafing * 0.5F;
+                float forward = rider.moveForward;
 
                 if (forward <= 0.0F) {
                     forward *= 0.25F; // Recule plus lentement
                 }
 
                 // Applique la vitesse de déplacement
-                this.setSpeed((float) this.getAttributeValue(Attributes.MOVEMENT_SPEED));
+                this.setAIMoveSpeed((float) this.getAttributeValue(Attributes.MOVEMENT_SPEED));
                 super.travel(new Vector3d(strafe, travelVector.y, forward));
 
                 return;

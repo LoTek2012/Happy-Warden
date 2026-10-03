@@ -12,6 +12,6 @@ public class ModEntityAttributes {
 
     @SubscribeEvent
     public static void registerAttributes(EntityAttributeCreationEvent event) {
-        event.put(ModEntityTypes.HAPPY_WARDEN.get(), HappyWardenEntity.registerAttributes().build());
+        event.put(ModEntityTypes.HAPPY_WARDEN.get(), HappyWardenEntity.registerAttributes().create());
     }
 }

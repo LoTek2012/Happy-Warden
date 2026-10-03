@@ -42,8 +42,8 @@ public final class HappyWardenNetwork {
             NetworkEvent.Context context = contextSupplier.get();
             context.enqueueWork(() -> {
                 ServerPlayerEntity player = context.getSender();
-                if (player != null && player.getVehicle() instanceof HappyWardenEntity) {
-                    ((HappyWardenEntity) player.getVehicle()).jumpFromRider(player);
+                if (player != null && player.getRidingEntity() instanceof HappyWardenEntity) {
+                    ((HappyWardenEntity) player.getRidingEntity()).jumpFromRider(player);
                 }
             });
             context.setPacketHandled(true);

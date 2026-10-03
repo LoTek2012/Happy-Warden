@@ -25,12 +25,12 @@ public class HappyWardenSaddleLayer<T extends HappyWardenEntity, M extends Entit
     public void render(MatrixStack matrixStack, IRenderTypeBuffer buffer, int packedLight, T entity, float limbSwing, float limbSwingAmount, float partialTicks, float ageInTicks, float netHeadYaw, float headPitch) {
         // Affiche la selle UNIQUEMENT si l'entité a une selle
         if (entity.isSaddled()) {
-            this.getParentModel().copyPropertiesTo(this.model);
-            this.model.setupAnim(entity, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
-            this.model.prepareMobModel(entity, limbSwing, limbSwingAmount, partialTicks);
+            this.getEntityModel().copyModelAttributesTo(this.model);
+            this.model.setLivingAnimations(entity, limbSwing, limbSwingAmount, partialTicks);
+            this.model.setRotationAngles(entity, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
             
             // Effectue le rendu avec la texture de la selle
-            renderColoredCutoutModel(this.model, SADDLE_TEXTURE, matrixStack, buffer, packedLight, entity, 1.0F, 1.0F, 1.0F);
+            renderCutoutModel(this.model, SADDLE_TEXTURE, matrixStack, buffer, packedLight, entity, 1.0F, 1.0F, 1.0F);
         }
     }
 }

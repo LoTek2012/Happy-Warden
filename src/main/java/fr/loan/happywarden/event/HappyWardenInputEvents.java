@@ -17,12 +17,12 @@ public class HappyWardenInputEvents {
     public static void onKeyInput(InputEvent.KeyInputEvent event) {
         Minecraft minecraft = Minecraft.getInstance();
         if (event.getAction() != GLFW.GLFW_PRESS || minecraft.player == null
-                || !minecraft.options.keyJump.matches(event.getKey(), event.getScanCode())
-                || !(minecraft.player.getVehicle() instanceof HappyWardenEntity)) {
+                || !minecraft.gameSettings.keyBindJump.matchesKey(event.getKey(), event.getScanCode())
+                || !(minecraft.player.getRidingEntity() instanceof HappyWardenEntity)) {
             return;
         }
 
-        HappyWardenEntity mount = (HappyWardenEntity) minecraft.player.getVehicle();
+        HappyWardenEntity mount = (HappyWardenEntity) minecraft.player.getRidingEntity();
         mount.jumpFromRider(minecraft.player);
         HappyWardenNetwork.CHANNEL.sendToServer(new HappyWardenNetwork.JumpMessage());
     }
