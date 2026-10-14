@@ -25,6 +25,7 @@ public final class HappyWardenNetwork {
 
     public static void register() {
         CHANNEL.registerMessage(0, JumpMessage.class, JumpMessage::encode, JumpMessage::decode, JumpMessage::handle);
+        CHANNEL.registerMessage(1, BeamMessage.class, BeamMessage::encode, BeamMessage::decode, BeamMessage::handle);
     }
 
     public static class JumpMessage {
@@ -44,6 +45,26 @@ public final class HappyWardenNetwork {
                 ServerPlayerEntity player = context.getSender();
                 if (player != null && player.getRidingEntity() instanceof HappyWardenEntity) {
                     ((HappyWardenEntity) player.getRidingEntity()).jumpFromRider(player);
+                }
+            });
+            context.setPacketHandled(true);
+        }
+    }
+
+    public static class BeamMessage {
+        private static void encode(BeamMessage message, PacketBuffer buffer) {
+        }
+
+        private static BeamMessage decode(PacketBuffer buffer) {
+            return new BeamMessage();
+        }
+
+        private static void handle(BeamMessage message, Supplier<NetworkEvent.Context> contextSupplier) {
+            NetworkEvent.Context context = contextSupplier.get();
+            context.enqueueWork(() -> {
+                ServerPlayerEntity player = context.getSender();
+                if (player != null && player.getRidingEntity() instanceof HappyWardenEntity) {
+                    ((HappyWardenEntity) player.getRidingEntity()).fireLightBeam(player);
                 }
             });
             context.setPacketHandled(true);

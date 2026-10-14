@@ -1,21 +1,29 @@
 package fr.loan.happywarden.entity;
 
+import java.util.List;
+
 import javax.annotation.Nullable;
 
+import fr.loan.happywarden.init.ModItems;
+import net.minecraft.block.BlockState;
+import net.minecraft.entity.AgeableEntity;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.CreatureEntity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.MobEntity;
 import net.minecraft.entity.ai.attributes.AttributeModifierMap;
 import net.minecraft.entity.ai.attributes.Attributes;
 import net.minecraft.entity.ai.goal.HurtByTargetGoal;
+import net.minecraft.entity.ai.goal.FollowOwnerGoal;
 import net.minecraft.entity.ai.goal.LookRandomlyGoal;
 import net.minecraft.entity.ai.goal.MeleeAttackGoal;
 import net.minecraft.entity.ai.goal.NearestAttackableTargetGoal;
+import net.minecraft.entity.ai.goal.OwnerHurtByTargetGoal;
+import net.minecraft.entity.ai.goal.OwnerHurtTargetGoal;
 import net.minecraft.entity.ai.goal.SwimGoal;
 import net.minecraft.entity.ai.goal.WaterAvoidingRandomWalkingGoal;
 import net.minecraft.entity.monster.MonsterEntity;
+import net.minecraft.entity.passive.TameableEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
@@ -24,17 +32,33 @@ import net.minecraft.network.datasync.DataParameter;
 import net.minecraft.network.datasync.DataSerializers;
 import net.minecraft.network.datasync.EntityDataManager;
 import net.minecraft.util.ActionResultType;
+import net.minecraft.util.DamageSource;
 import net.minecraft.util.Hand;
 import net.minecraft.util.SoundEvents;
+import net.minecraft.util.math.AxisAlignedBB;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.particles.ParticleTypes;
+import net.minecraft.world.Explosion;
 import net.minecraft.world.World;
+import net.minecraft.world.server.ServerWorld;
 
-public class HappyWardenEntity extends CreatureEntity {
+public class HappyWardenEntity extends TameableEntity {
+
+    private static final double BEAM_RANGE = 32.0D;
+    private static final float BEAM_DAMAGE = 100.0F;
+    private int beamCooldown;
 
     private static final DataParameter<Boolean> SADDLED = EntityDataManager.createKey(HappyWardenEntity.class, DataSerializers.BOOLEAN);
 
-    public HappyWardenEntity(EntityType<? extends CreatureEntity> type, World world) {
+    public HappyWardenEntity(EntityType<? extends HappyWardenEntity> type, World world) {
         super(type, world);
+    }
+
+    @Nullable
+    @Override
+    public AgeableEntity createChild(ServerWorld world, AgeableEntity mate) {
+        return null;
     }
 
     // Attributs de base (vie, vitesse, dégâts)
@@ -77,17 +101,36 @@ public class HappyWardenEntity extends CreatureEntity {
     protected void registerGoals() {
         this.goalSelector.addGoal(1, new SwimGoal(this));
         this.goalSelector.addGoal(2, new MeleeAttackGoal(this, 1.0D, false));
-        this.goalSelector.addGoal(3, new WaterAvoidingRandomWalkingGoal(this, 0.8D));
-        this.goalSelector.addGoal(4, new LookRandomlyGoal(this));
+        this.goalSelector.addGoal(3, new FollowOwnerGoal(this, 1.0D, 10.0F, 2.0F, false));
+        this.goalSelector.addGoal(4, new WaterAvoidingRandomWalkingGoal(this, 0.8D));
+        this.goalSelector.addGoal(5, new LookRandomlyGoal(this));
 
-        this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
-        this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, MonsterEntity.class, true));
+        this.targetSelector.addGoal(1, new OwnerHurtByTargetGoal(this));
+        this.targetSelector.addGoal(2, new OwnerHurtTargetGoal(this));
+        this.targetSelector.addGoal(3, new HurtByTargetGoal(this) {
+            @Override
+            public boolean shouldExecute() {
+                return !HappyWardenEntity.this.isTamed() && super.shouldExecute();
+            }
+        });
+        this.targetSelector.addGoal(4, new NearestAttackableTargetGoal<>(this, MonsterEntity.class, true));
     }
 
     // Interaction avec le joueur
     @Override
-    protected ActionResultType getEntityInteractionResult(PlayerEntity player, Hand hand) {
+    public ActionResultType getEntityInteractionResult(PlayerEntity player, Hand hand) {
         ItemStack stack = player.getHeldItem(hand);
+
+        if (!this.isTamed() && stack.getItem() == ModItems.WARDEN_BREAD.get()) {
+            if (!this.world.isRemote) {
+                this.setTamedBy(player);
+                this.setAttackTarget(null);
+                if (!player.abilities.isCreativeMode) {
+                    stack.shrink(1);
+                }
+            }
+            return ActionResultType.func_233537_a_(this.world.isRemote);
+        }
 
         // Mettre la selle
         if (stack.getItem() == Items.SADDLE && !this.isSaddled()) {
@@ -126,6 +169,57 @@ public class HappyWardenEntity extends CreatureEntity {
     public void jumpFromRider(PlayerEntity rider) {
         if (rider == this.getControllingPassenger() && this.onGround) {
             this.jump();
+        }
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        if (this.beamCooldown > 0) {
+            this.beamCooldown--;
+        }
+    }
+
+    public void fireLightBeam(PlayerEntity rider) {
+        if (this.world.isRemote || rider != this.getControllingPassenger() || this.beamCooldown > 0) {
+            return;
+        }
+
+        this.beamCooldown = 80;
+        ServerWorld serverWorld = (ServerWorld) this.world;
+        Vector3d start = this.getPositionVec().add(0.0D, this.getHeight() * 0.58D, 0.0D);
+        Vector3d direction = rider.getLookVec().normalize();
+        Vector3d actualEnd = start.add(direction.scale(BEAM_RANGE));
+        BlockPos previousBlock = null;
+
+        for (double distance = 0.0D; distance <= BEAM_RANGE; distance += 0.35D) {
+            Vector3d point = start.add(direction.scale(distance));
+            BlockPos blockPos = new BlockPos(point);
+
+            if (!blockPos.equals(previousBlock)) {
+                previousBlock = blockPos;
+                BlockState blockState = this.world.getBlockState(blockPos);
+                if (!blockState.isAir()) {
+                    actualEnd = point;
+                    this.world.createExplosion(this, point.x, point.y, point.z, 4.0F, Explosion.Mode.DESTROY);
+                    serverWorld.spawnParticle(ParticleTypes.EXPLOSION_EMITTER,
+                            point.x, point.y, point.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
+                    break;
+                }
+            }
+
+            serverWorld.spawnParticle(ParticleTypes.END_ROD, point.x, point.y, point.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
+            actualEnd = point;
+        }
+
+        AxisAlignedBB beamBounds = new AxisAlignedBB(start, actualEnd).grow(1.0D);
+        List<LivingEntity> targets = this.world.getEntitiesWithinAABB(LivingEntity.class, beamBounds,
+                target -> target != this && target.isAlive());
+        for (LivingEntity target : targets) {
+            if (target != rider && !this.isOnSameTeam(target) && this.canAttack(target)
+                    && target.getBoundingBox().grow(0.2D).intersects(start, actualEnd)) {
+                target.attackEntityFrom(DamageSource.causeMobDamage(this), BEAM_DAMAGE);
+            }
         }
     }
 

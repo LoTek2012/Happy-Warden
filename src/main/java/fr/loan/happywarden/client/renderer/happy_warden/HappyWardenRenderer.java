@@ -2,7 +2,6 @@ package fr.loan.happywarden.client.renderer.happy_warden;
 
 import fr.loan.happywarden.HappyWarden;
 import fr.loan.happywarden.client.model.HappyWardenModel;
-import fr.loan.happywarden.client.renderer.happy_warden.HappyWardenSaddleLayer;
 import fr.loan.happywarden.entity.HappyWardenEntity;
 
 import net.minecraft.client.renderer.entity.EntityRendererManager;
