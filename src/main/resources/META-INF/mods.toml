@@ -10,8 +10,7 @@ version="${mod_version}"
 displayName="${mod_name}"
 updateJSONURL="https://raw.githubusercontent.com/LoTek2012/Happy-Warden/refs/heads/main/updates.json"
 displayURL="https://github.com/LoTek2012/Happy-Warden"
-# A file name (in the root of the mod JAR) containing a logo for display
-#logoFile="examplemod.png"
+logoFile="logo.png"
 authors="${mod_authors}"
 
 description='''${mod_description}'''
